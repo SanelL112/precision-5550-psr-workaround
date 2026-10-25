@@ -12,7 +12,7 @@ The tested BIOS was 1.42.0 and the panel was a Sharp SHP 0x14d1. Firmware may ch
 
 The change is restricted to PSR1. Changing `enable_psr` to 2 prevents this override from applying. Removing `psr_diag=1` also prevents it from applying. Removing the new module/image, losing signing-key trust, or selecting the normal boot will stop using the experimental path.
 
-One s2idle suspend/resume cycle has passed with post-wake PSR verification. Repeated sleep/wake cycles, display power cycling, external displays, refresh-rate changes and sustained workloads still need testing. The current result is an experimental workaround with initial screen and resume validation, not a permanent upstream fix.
+Four s2idle suspend/resume cycles have passed with post-wake PSR verification. Display power cycling, external displays, refresh-rate changes and sustained workloads still need testing. The current result is an experimental workaround with initial screen and resume validation, not a permanent upstream fix.
 
 ## Power savings
 
