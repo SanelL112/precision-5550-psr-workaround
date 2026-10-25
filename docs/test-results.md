@@ -27,3 +27,13 @@ The source-only build and patch reproduction checks passed. Seven boot-entry saf
 No boot identifiers, root filesystem UUIDs, serials, raw firmware data, process lists, private keys or credentials are included. Suspend/resume and battery-power outcomes remain unverified.
 
 The exported build.sh was subsequently executed against the verified archive on the tested kernel. It completed successfully and produced an i915 module exposing both diagnostic parameters. This build-only verification did not alter the installed driver or boot settings.
+
+## Subsequent battery and suspend observations
+
+After stopping an unused automatically started virtual RDP display, the user reported approximately 5 W total idle draw, compared with their earlier reported 10–11 W. These are user observations across several changes, not a controlled PSR-on/off comparison; the contributions of PSR, virtual-display removal and workload changes have not been isolated.
+
+The user reported one flicker during the battery-triggered switch from about 60 Hz to 47.96 Hz. Logs showed successful internal link training and PSR1 re-enable at the transition, with no matching internal PSR timeout observed. Steady-state flicker has not been established.
+
+An initial suspend attempt failed before sleep because SELinux denied NVIDIA access to its anonymous video-memory backing file. A separate local file-labeling correction resolved that access failure while retaining SELinux enforcing. This machine-specific correction is not part of the i915 patch set. The failure resembles [Fedora issue 2482677](https://bugzilla.redhat.com/show_bug.cgi?id=2482677).
+
+After that correction, one user-triggered s2idle suspend/resume cycle completed with systemd-suspend.service exit status 0/SUCCESS. The user reported no apparent breakage. Post-wake checks confirmed PSR1 enabled, standby=1, panel active self-refresh with error status zero, and the experiment parameter still Y. This is one verified cycle; repeated cycles and longer-term reliability remain unverified.

@@ -1,6 +1,6 @@
 # Dell Precision 5550: experimental i915 PSR1 link-standby workaround
 
-A small, opt-in i915 change avoided a dark internal display when enabling PSR1 on one Dell Precision 5550. **Initial screen operation is confirmed; suspend/resume reliability and battery savings are not yet established.** This is a local experiment, not an upstream fix or a supported driver release.
+A small, opt-in i915 change avoided a dark internal display when enabling PSR1 on one Dell Precision 5550. **Screen operation and one s2idle suspend/resume cycle are confirmed. Repeated-cycle reliability and controlled battery savings are not yet established.** This is a local experiment, not an upstream fix or a supported driver release.
 
 ## What changed
 
@@ -29,7 +29,7 @@ The override defaults off and requires all of: `psr_diag_link_standby=1`, `psr_d
 | Instrumented PSR1, link-off | Driver confirmed loaded; physical screen dark |
 | Instrumented PSR1, link-standby | User confirmed working backlight; PSR1 and panel self-refresh verified |
 | Battery savings | Not measured in a controlled battery comparison |
-| Suspend/resume | Not yet tested |
+| Suspend/resume | One user-triggered s2idle cycle passed; PSR1 and panel self-refresh verified after wake |
 
 The successful test retained `i915.psr_safest_params=1`; normal firmware timings have not been isolated from this result. Other local driver options also remained in place, so this is not a claim that every Precision 5550 configuration will behave identically.
 
