@@ -1,0 +1,9 @@
+[Unit]
+Description=Return an unconfirmed PSR update trial to stock Fedora
+ConditionKernelCommandLine=precision_psr.trial
+ConditionPathExists=!/run/precision-psr-auto-confirmed
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/precision-psr-update recover
+TimeoutStartSec=30s

@@ -6,7 +6,7 @@ The built i915 module targets exactly `7.2.11-200.fc44.x86_64`. Do not copy it i
 
 The tested host now has a saved default named **Dell Precision 5550 PSR1 (validated)**, using the existing tested image and exact tested options. Its persistent marker excludes it from the four-minute diagnostic recovery timer. The stock kernel, module, image and recovery entry remain unchanged, and `/etc/kernel/cmdline` explicitly disables PSR for future stock entries.
 
-The installed kernel-install hook switches newer kernel updates to stock PSR-disabled boots rather than pinning the old experimental kernel. A boot-time check and systemd path watcher detect changes to tracked images, NVIDIA modules, signing certificate and boot configuration; if the validated entry is selected, they fall back to a usable stock default. These checks change the next default, not the running driver. They do not automatically rebuild or port the patch. BIOS/panel changes still need manual review.
+The installed kernel-install hook switches newer kernel updates to stock PSR-disabled boots rather than pinning the old experimental kernel. A boot-time check and systemd path watcher detect changes to tracked images, NVIDIA modules, signing certificate and boot configuration; if the validated entry is selected, they fall back to a usable stock default. The live path watcher changes the next default, not the running driver. A separate check before the login screen detects stale persistent images after offline updates and requests a recovery reboot into stock Fedora. The separate [automatic worker](../automatic/README.md) now attempts matching-source rebuilds and signing while on AC power. It stages a candidate without enabling it; the local PSR Updates app handles one-time testing and screen confirmation. It does not automatically rewrite incompatible patches. BIOS/panel changes still need manual review.
 
 After kernel or GPU-driver updates, run:
 
@@ -14,7 +14,7 @@ After kernel or GPU-driver updates, run:
 sudo precision-psr status
 ```
 
-If maintenance is required, refresh/rebuild the image for the matching kernel and GPU-driver files, sign it, and repeat the hardware tests before promoting it. Do not force the stale image back into use. To select stock recovery without rebooting, run `sudo precision-psr use-stock`. `sudo precision-psr use-validated` refuses tracked-file/signing-trust mismatches, but is not a substitute for validating a future build. The [lifecycle reference tools](../lifecycle/README.md) are included; the host-specific installer and configuration are omitted.
+For a compatible routine update, the worker performs the rebuild/sign/stage steps. Open **PSR Updates** when notified, prepare a one-time trial, reboot, and confirm that the built-in screen works. No assistant is required. If the worker reports an incompatible source/API change, patch maintenance is still necessary before another build can be tested. Do not force the stale image back into use. To select stock recovery without rebooting, run `sudo precision-psr use-stock`. `sudo precision-psr use-validated` refuses tracked-file/signing-trust mismatches, but is not a substitute for validating a future build. The [lifecycle reference tools](../lifecycle/README.md) are included; the host-specific installer and configuration are omitted.
 
 An update can stop using this workaround without implying that the hardware has failed. Enabling PSR on an unpatched driver may reproduce the original dark-screen behavior.
 

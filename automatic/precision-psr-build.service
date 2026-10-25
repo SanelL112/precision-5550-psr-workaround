@@ -1,0 +1,16 @@
+[Unit]
+Description=Build and sign an isolated PSR candidate after kernel or GPU updates
+After=network-online.target akmods.service
+Wants=network-online.target
+ConditionACPower=true
+ConditionPathExists=/etc/precision-psr-managed.json
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/precision-psr-update build
+Nice=15
+CPUQuota=200%
+MemoryMax=6G
+TimeoutStartSec=45min
+TimeoutStopSec=30s
+UMask=0022

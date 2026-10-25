@@ -45,6 +45,7 @@ The successful test retained `i915.psr_safest_params=1`; normal firmware timings
 - `examples/recovery/`: the four-minute recovery helper and systemd unit examples.
 - `tests/`: boot-entry safety and compression regression tests.
 - `lifecycle/`: validated-default selection and update guard reference tools, with 17 tests.
+- `automatic/`: automatic matching-source rebuild/sign/staging and a local test/confirmation app, with 16 tests.
 - [Build and test details](docs/build-and-test.md), [update behavior](docs/updates.md), [sanitized evidence](docs/test-results.md).
 
 Host-specific installers, credentials, raw logs, boot/root identifiers, signing keys, firmware dumps, kernel archives and compiled modules are not included.
@@ -68,9 +69,9 @@ bash -n build.sh
 
 ## Will updates break it?
 
-A custom module is specific to its kernel build. A new kernel requires a new matching build and a fresh test; this repository's recipe intentionally rejects other kernels. BIOS/panel firmware changes, panel replacement, PSR2, and suspend/resume can affect behavior and need validation. Ordinary unrelated application changes have not been shown to invalidate the workaround.
+A custom module is specific to its kernel build. A new kernel requires a new matching build and a fresh test. The original `build.sh` recipe intentionally rejects other kernels; the separate [automatic worker](automatic/README.md) obtains each matching source package and attempts the unchanged patches, failing closed if incompatible. BIOS/panel firmware changes, panel replacement, PSR2, and suspend/resume can affect behavior and need validation. Ordinary unrelated application changes have not been shown to invalidate the workaround.
 
-The tested host now defaults to a separate **Dell Precision 5550 PSR1 (validated)** GRUB entry using the exact tested image and settings. The stock Fedora kernel, module, initramfs and recovery entry remain unchanged with PSR disabled. A local update guard selects a stock default if tracked kernel/GPU inputs change; newer kernels also use stock PSR-disabled boots until a matching rebuild and hardware test pass. There is no automatic rebuild, DKMS/akmods package, or upstream integration. See [update behavior](docs/updates.md) and [lifecycle tools](lifecycle/README.md).
+The tested host now defaults to a separate **Dell Precision 5550 PSR1 (validated)** GRUB entry using the exact tested image and settings. The stock Fedora kernel, module, initramfs and recovery entry remain unchanged with PSR disabled. A local update guard selects a stock default if tracked kernel/GPU inputs change; newer kernels also use stock PSR-disabled boots until a matching rebuild and hardware test pass. The [automatic integration](automatic/README.md) now builds and signs compatible updates in the background and provides a local app for a one-time screen test and promotion. There is no DKMS/akmods package or upstream integration. See [update behavior](docs/updates.md) and [lifecycle tools](lifecycle/README.md).
 
 ## Sources and license
 

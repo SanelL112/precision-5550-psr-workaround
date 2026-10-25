@@ -1,0 +1,11 @@
+[Unit]
+Description=Check for automatic PSR rebuilds on AC power
+
+[Timer]
+OnBootSec=5min
+OnUnitInactiveSec=15min
+AccuracySec=30s
+Unit=precision-psr-build.service
+
+[Install]
+WantedBy=timers.target

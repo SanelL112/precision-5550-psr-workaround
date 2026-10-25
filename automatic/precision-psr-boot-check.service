@@ -1,0 +1,13 @@
+[Unit]
+Description=Check persistent PSR image before starting the login screen
+After=local-fs.target akmods.service
+Before=display-manager.service
+RequiresMountsFor=/boot
+ConditionKernelCommandLine=precision_psr.validated=1
+ConditionKernelCommandLine=!precision_psr.trial
+ConditionPathExists=/etc/precision-psr-managed.json
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/precision-psr-update boot-check
+TimeoutStartSec=60s

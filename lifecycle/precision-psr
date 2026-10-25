@@ -141,7 +141,10 @@ def status(config):
         event = json.loads(pending)
         if event['kernel'] != config['kernel']:
             print('Last kernel update:', event['action'], event['kernel'])
-            print('No automatic patch porting/rebuild was attempted.')
+            if Path('/usr/local/sbin/precision-psr-update').exists():
+                print('Automatic rebuild status: precision-psr-update status; test ready builds using PSR Updates.')
+            else:
+                print('No automatic patch porting/rebuild was attempted.')
     print('Recovery default: sudo precision-psr use-stock (does not reboot)')
 
 

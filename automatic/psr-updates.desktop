@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=PSR Updates
+Comment=Test and confirm automatically rebuilt PSR drivers
+Exec=/usr/bin/python3 /usr/local/lib/precision-psr-auto/gui.py
+Icon=video-display
+Terminal=false
+Categories=Settings;HardwareSettings;

@@ -1,0 +1,11 @@
+[Unit]
+Description=Five-minute recovery deadline for PSR update trials
+ConditionKernelCommandLine=precision_psr.trial
+
+[Timer]
+OnBootSec=5min
+AccuracySec=1s
+Unit=precision-psr-auto-recover.service
+
+[Install]
+WantedBy=timers.target

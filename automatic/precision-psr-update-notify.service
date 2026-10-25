@@ -1,0 +1,7 @@
+[Unit]
+Description=Notify about a signed PSR update ready for testing
+ConditionEnvironment=WAYLAND_DISPLAY
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/lib/precision-psr-auto/gui.py --notify
