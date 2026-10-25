@@ -1,0 +1,52 @@
+--- a/drivers/gpu/drm/i915/display/intel_display_params.h
++++ b/drivers/gpu/drm/i915/display/intel_display_params.h
+@@ -50,6 +50,7 @@
+ 	param(int, enable_panel_replay, -1, 0600) \
+ 	param(bool, psr_safest_params, false, 0400) \
+ 	param(bool, psr_diag, false, 0400) \
++	param(bool, psr_diag_link_standby, false, 0400) \
+ 	param(bool, enable_psr2_sel_fetch, true, 0400) \
+ 	param(int, enable_dmc_wl, -1, 0400) \
+ 
+--- a/drivers/gpu/drm/i915/display/intel_display_params.c
++++ b/drivers/gpu/drm/i915/display/intel_display_params.c
+@@ -127,6 +127,9 @@
+ intel_display_param_named_unsafe(enable_panel_replay, int, 0400,
+ 	"Enable Panel Replay (0=disabled, 1=enabled). Default: -1 (use per-chip default)");
+ 
++intel_display_param_named_unsafe(psr_diag_link_standby, bool, 0400,
++				 "Precision 5550 PSR1 link-standby experiment (requires psr_diag, default: false)");
++
+ intel_display_param_named(psr_diag, bool, 0400,
+ 			  "Enable bounded Gen9 PSR1 diagnostic logging (default: false)");
+ 
+--- a/drivers/gpu/drm/i915/display/intel_psr.c
++++ b/drivers/gpu/drm/i915/display/intel_psr.c
+@@ -22,6 +22,7 @@
+  */
+ 
+ #include <linux/debugfs.h>
++#include <linux/dmi.h>
+ #include <linux/ratelimit.h>
+ 
+ #include <drm/drm_atomic_helper.h>
+--- a/drivers/gpu/drm/i915/display/intel_psr.c
++++ b/drivers/gpu/drm/i915/display/intel_psr.c
+@@ -3894,6 +3894,17 @@
+ 	if (DISPLAY_VER(display) < 12)
+ 		/* For new platforms up to TGL let's respect VBT back again */
+ 		intel_dp->psr.link_standby = connector->panel.vbt.psr.full_link;
++
++	/* Opt-in experiment for the observed Precision 5550 PSR1 blanking. */
++	if (display->params.psr_diag_link_standby && display->params.psr_diag &&
++	    display->params.enable_psr == 1 && DISPLAY_VER(display) == 9 &&
++	    intel_dp->psr.source_support &&
++	    dmi_match(DMI_SYS_VENDOR, "Dell Inc.") &&
++	    dmi_match(DMI_PRODUCT_NAME, "Precision 5550")) {
++		intel_dp->psr.link_standby = true;
++		drm_info(display->drm,
++			 "PSRDIAG-v2 Precision 5550 PSR1 link-standby experiment enabled\n");
++	}
+ 
+ 	INIT_WORK(&intel_dp->psr.work, intel_psr_work);
+ 	INIT_DELAYED_WORK(&intel_dp->psr.dc3co_work, tgl_dc3co_disable_work);

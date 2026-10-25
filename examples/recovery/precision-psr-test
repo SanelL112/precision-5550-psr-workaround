@@ -1,0 +1,66 @@
+#!/usr/bin/env python3
+"""Confirm a working test screen, inspect status, or return to normal boot."""
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+CONFIG = Path("/etc/precision-psr-test.json")
+CONFIRMED = Path("/run/precision-psr-test/confirmed")
+
+
+def is_test_boot(cmdline):
+    args = cmdline.split()
+    return "i915.enable_psr=1" in args and "i915.psr_safest_params=1" in args
+
+
+def recovery_allowed(cmdline, confirmed):
+    return is_test_boot(cmdline) and not confirmed
+
+
+def main():
+    action = sys.argv[1] if len(sys.argv) > 1 else "status"
+    cmdline = Path("/proc/cmdline").read_text()
+    if action == "status":
+        print("Conservative test boot:", is_test_boot(cmdline))
+        print("Screen confirmed:", CONFIRMED.exists())
+        print("Measurements: /var/log/precision-psr-test/<boot-id>/")
+        return
+    if action not in ("confirm", "recover", "auto-recover"):
+        raise SystemExit("Usage: precision-psr-test {status|confirm|recover}")
+    if os.geteuid() != 0:
+        raise SystemExit("Use sudo for confirm or recover")
+    if not is_test_boot(cmdline):
+        raise SystemExit("Not a conservative PSR test boot; no action taken")
+    if action == "confirm":
+        # Run this only after the user confirms that the internal display works.
+        CONFIRMED.parent.mkdir(mode=0o755, parents=True, exist_ok=True)
+        CONFIRMED.touch()
+        subprocess.run(["systemctl", "stop", "precision-psr-recover.timer"], check=True)
+        print("Screen confirmed. Automatic recovery cancelled for this boot.")
+        return
+    if action == "auto-recover" and not recovery_allowed(cmdline, CONFIRMED.exists()):
+        print("Screen was confirmed; automatic recovery skipped.")
+        return
+    config = json.loads(CONFIG.read_text())
+    normal = config["normal_entry"]
+    if "/" in normal or not normal:
+        raise SystemExit("Invalid normal boot entry")
+    normal_path = Path("/boot/loader/entries") / (normal + ".conf")
+    original = normal_path.read_text()
+    if not any(line.startswith("options ") and "i915.enable_psr=0" in line.split() for line in original.splitlines()):
+        raise SystemExit("Normal boot entry is not PSR-disabled; refusing recovery")
+    subprocess.run(["grub2-reboot", normal], check=True)
+    env = subprocess.check_output(["grub2-editenv", "list"], text=True).splitlines()
+    if "next_entry=" + normal not in env:
+        raise SystemExit("Could not verify recovery boot selection")
+    if action == "auto-recover" and CONFIRMED.exists():
+        print("Screen confirmed while selecting recovery; reboot cancelled.")
+        return
+    print("Returning to the normal PSR-disabled boot.", flush=True)
+    subprocess.run(["systemctl", "reboot"], check=True)
+
+
+if __name__ == "__main__":
+    main()

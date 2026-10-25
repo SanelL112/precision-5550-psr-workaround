@@ -1,0 +1,15 @@
+/build/
+/dist/
+__pycache__/
+*.py[cod]
+*.ko
+*.ko.*
+*.img
+*.rpm
+*.key
+*.pem
+*.priv
+*.der
+*.log
+installed.json
+metadata.json

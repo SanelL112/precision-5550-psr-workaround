@@ -1,0 +1,16 @@
+[Unit]
+Description=Persist diagnostic i915 PSR source and panel state
+After=display-manager.service
+ConditionKernelCommandLine=i915.enable_psr=1
+ConditionKernelCommandLine=i915.psr_safest_params=1
+ConditionKernelCommandLine=i915.psr_diag=1
+
+[Service]
+Type=exec
+ExecStart=/usr/local/libexec/precision-psr-trace
+RuntimeMaxSec=210
+TimeoutStopSec=5
+Nice=10
+
+[Install]
+WantedBy=graphical.target

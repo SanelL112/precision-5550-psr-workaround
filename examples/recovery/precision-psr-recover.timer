@@ -1,0 +1,12 @@
+[Unit]
+Description=Four-minute recovery deadline for an unconfirmed PSR test
+ConditionKernelCommandLine=i915.enable_psr=1
+ConditionKernelCommandLine=i915.psr_safest_params=1
+
+[Timer]
+OnBootSec=4min
+AccuracySec=1s
+Unit=precision-psr-recover.service
+
+[Install]
+WantedBy=timers.target

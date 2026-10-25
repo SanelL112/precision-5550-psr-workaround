@@ -1,0 +1,10 @@
+[Unit]
+Description=Return an unconfirmed PSR test to the normal boot
+ConditionKernelCommandLine=i915.enable_psr=1
+ConditionKernelCommandLine=i915.psr_safest_params=1
+ConditionPathExists=!/run/precision-psr-test/confirmed
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/precision-psr-test auto-recover
+TimeoutStartSec=30

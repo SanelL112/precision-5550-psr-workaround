@@ -1,0 +1,60 @@
+#!/usr/bin/python3
+"""Persist source and panel PSR state before the four-minute recovery."""
+import glob
+import json
+import subprocess
+import time
+from pathlib import Path
+
+
+def read(path):
+    try:
+        return Path(path).read_text().strip()
+    except OSError as exc:
+        return {'error': str(exc)}
+
+
+def journal(dest):
+    p = subprocess.run(['journalctl', '-k', '-b', '--no-pager', '-o', 'short-monotonic'], capture_output=True, timeout=12)
+    (dest / 'diagnostic-kernel.log').write_bytes(p.stdout + p.stderr)
+
+
+def main():
+    args = Path('/proc/cmdline').read_text().split()
+    if not {'i915.enable_psr=1', 'i915.psr_safest_params=1', 'i915.psr_diag=1'}.issubset(args):
+        raise SystemExit('Not a diagnostic PSR boot')
+    dest = Path('/var/log/precision-psr-test') / Path('/proc/sys/kernel/random/boot_id').read_text().strip()
+    dest.mkdir(parents=True, exist_ok=True)
+    if read('/sys/module/i915/parameters/psr_diag') != 'Y' or (
+        'i915.psr_diag_link_standby=1' in args and
+        read('/sys/module/i915/parameters/psr_diag_link_standby') != 'Y'
+    ):
+        (dest / 'invalid-driver.txt').write_text('Diagnostic module did not load; requesting normal recovery.\n')
+        journal(dest)
+        subprocess.run(['/usr/local/sbin/precision-psr-test', 'recover'], check=True, timeout=30)
+        return
+    paths = [
+        '/sys/module/i915/parameters/psr_diag',
+        '/sys/module/i915/parameters/psr_diag_link_standby', '/sys/module/i915/srcversion',
+        '/sys/kernel/debug/dri/0000:00:02.0/i915_edp_psr_status',
+        '/sys/class/backlight/intel_backlight/brightness',
+        '/sys/class/backlight/intel_backlight/actual_brightness',
+        '/sys/class/backlight/intel_backlight/bl_power',
+    ]
+    end = time.monotonic() + 180
+    with (dest / 'panel-trace.jsonl').open('a', buffering=1) as output:
+        index = 0
+        while time.monotonic() < end:
+            extra = glob.glob('/sys/kernel/debug/dri/0000:00:02.0/*/i915_psr*status')
+            state = {'uptime': read('/proc/uptime'), 'state': {p: read(p) for p in paths + extra}}
+            output.write(json.dumps(state) + '\n')
+            output.flush()
+            if index % 5 == 0:
+                journal(dest)
+            index += 1
+            time.sleep(2)
+    journal(dest)
+
+
+if __name__ == '__main__':
+    main()
