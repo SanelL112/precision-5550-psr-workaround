@@ -23,6 +23,7 @@ The override defaults off and requires all of: `psr_diag_link_standby=1`, `psr_d
 | Panel | Sharp SHP 0x14d1, LQ156N1 family, 1920x1200 |
 | OS/kernel | Fedora 44, `7.2.11-200.fc44.x86_64` |
 | BIOS | 1.42.0 |
+| Experimental boots | Two successful v2 boots, with driver and PSR state verified |
 | Signing | Secure Boot remained enabled; existing enrolled local key |
 | Stock PSR1 | Physical screen dark |
 | Stock PSR1 + conservative training timings | Physical screen dark |

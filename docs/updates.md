@@ -12,7 +12,7 @@ The tested BIOS was 1.42.0 and the panel was a Sharp SHP 0x14d1. Firmware may ch
 
 The change is restricted to PSR1. Changing `enable_psr` to 2 prevents this override from applying. Removing `psr_diag=1` also prevents it from applying. Removing the new module/image, losing signing-key trust, or selecting the normal boot will stop using the experimental path.
 
-Four s2idle suspend/resume cycles have passed with post-wake PSR verification. One all-display power-off/on cycle and the user-reported charger transition sequence also passed, with PSR verified afterward. A separate physical monitor/dock reconnect, another experimental boot and sustained use still need testing. The current result is an experimental workaround with initial screen and resume validation, not a permanent upstream fix.
+Four s2idle suspend/resume cycles have passed with post-wake PSR verification. One all-display power-off/on cycle and the user-reported charger transition sequence also passed, with PSR verified afterward. The user confirmed the charging-cable test also disconnected/reconnected the dock, and a second experimental boot passed with the driver and PSR state verified. Sustained day-to-day use and controlled power attribution remain outstanding. The current result is an experimental workaround with initial screen and resume validation, not a permanent upstream fix.
 
 ## Power savings
 
