@@ -24,7 +24,7 @@ The `PSRDIAG-v1` status label identifies the retained instrumentation layer; the
 
 The source-only build and patch reproduction checks passed. Seven boot-entry safety tests and the compression-format test are included in this repository. Recovery behavior also passed ten tests in the original local investigation; those host-test fixtures are not part of this exported repository, so the repository's runnable suite reports eight tests.
 
-No boot identifiers, root filesystem UUIDs, serials, raw firmware data, process lists, private keys or credentials are included. Suspend/resume and battery-power outcomes remain unverified.
+No boot identifiers, root filesystem UUIDs, serials, raw firmware data, process lists, private keys or credentials are included. At initial publication, suspend/resume and battery-power outcomes were unverified; subsequent observations are recorded below.
 
 The exported build.sh was subsequently executed against the verified archive on the tested kernel. It completed successfully and produced an i915 module exposing both diagnostic parameters. This build-only verification did not alter the installed driver or boot settings.
 
