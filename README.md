@@ -29,6 +29,8 @@ The override defaults off and requires all of: `psr_diag_link_standby=1`, `psr_d
 | Instrumented PSR1, link-off | Driver confirmed loaded; physical screen dark |
 | Instrumented PSR1, link-standby | User confirmed working backlight; PSR1 and panel self-refresh verified |
 | Battery savings | Not measured in a controlled battery comparison |
+| Charger transitions | User completed plug/unplug sequence without issues; PSR state checked afterward |
+| Display off/on | One all-display DPMS cycle passed with internal panel and two external displays restored; PSR checked afterward |
 | Suspend/resume | Four user-triggered s2idle cycles passed; PSR1 and panel self-refresh verified after the final wake |
 
 The successful test retained `i915.psr_safest_params=1`; normal firmware timings have not been isolated from this result. Other local driver options also remained in place, so this is not a claim that every Precision 5550 configuration will behave identically.
