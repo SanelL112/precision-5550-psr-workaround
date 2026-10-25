@@ -4,7 +4,19 @@
 
 The built i915 module targets exactly `7.2.11-200.fc44.x86_64`. Do not copy it into another kernel's module tree. Kernel ABI, internal structures, exported symbols, driver behavior and signing requirements can change. Obtain matching source and kernel-devel, port/review the patches if necessary, rebuild, sign, stage a separate image, and repeat testing.
 
-This repository supplies no automatic rebuild integration. The original normal boot entry and default remained PSR-disabled, and newer normal entries should be inspected rather than assumed to inherit any particular command line. An update can stop using this workaround without implying that the hardware has failed. Enabling PSR on an unpatched driver may reproduce the original dark-screen behavior.
+The tested host now has a saved default named **Dell Precision 5550 PSR1 (validated)**, using the existing tested image and exact tested options. Its persistent marker excludes it from the four-minute diagnostic recovery timer. The stock kernel, module, image and recovery entry remain unchanged, and `/etc/kernel/cmdline` explicitly disables PSR for future stock entries.
+
+The installed kernel-install hook switches newer kernel updates to stock PSR-disabled boots rather than pinning the old experimental kernel. A boot-time check and systemd path watcher detect changes to tracked images, NVIDIA modules, signing certificate and boot configuration; if the validated entry is selected, they fall back to a usable stock default. These checks change the next default, not the running driver. They do not automatically rebuild or port the patch. BIOS/panel changes still need manual review.
+
+After kernel or GPU-driver updates, run:
+
+```bash
+sudo precision-psr status
+```
+
+If maintenance is required, refresh/rebuild the image for the matching kernel and GPU-driver files, sign it, and repeat the hardware tests before promoting it. Do not force the stale image back into use. To select stock recovery without rebooting, run `sudo precision-psr use-stock`. `sudo precision-psr use-validated` refuses tracked-file/signing-trust mismatches, but is not a substitute for validating a future build. The [lifecycle reference tools](../lifecycle/README.md) are included; the host-specific installer and configuration are omitted.
+
+An update can stop using this workaround without implying that the hardware has failed. Enabling PSR on an unpatched driver may reproduce the original dark-screen behavior.
 
 ## BIOS, firmware, panel and PSR mode
 

@@ -1,0 +1,11 @@
+[Unit]
+Description=Check validated PSR boot image against installed kernel and GPU drivers
+After=local-fs.target
+ConditionPathExists=/etc/precision-psr-managed.json
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/precision-psr guard
+
+[Install]
+WantedBy=multi-user.target

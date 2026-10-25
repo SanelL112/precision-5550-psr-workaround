@@ -1,0 +1,201 @@
+#!/usr/bin/python3
+"""Inspect PSR lifecycle status or choose a validated/stock boot default."""
+import argparse
+import hashlib
+import json
+import os
+import re
+import subprocess
+import time
+from pathlib import Path
+
+CONFIG = Path('/etc/precision-psr-managed.json')
+PENDING = Path('/var/lib/precision-psr-diagnostic/kernel-update.json')
+ENTRIES = Path('/boot/loader/entries')
+HEALTH = Path('/var/lib/precision-psr-diagnostic/maintenance-status.json')
+MARKER = 'precision_psr.validated=1'
+
+
+def out(*args):
+    return subprocess.check_output(args, text=True).strip()
+
+
+def read(path):
+    try:
+        return Path(path).read_text().strip()
+    except OSError:
+        return None
+
+
+def fingerprint_errors(fingerprints):
+    errors = []
+    for path, expected in fingerprints.items():
+        try:
+            actual = hashlib.sha256(Path(path).read_bytes()).hexdigest()
+        except OSError:
+            errors.append('Missing: ' + path)
+            continue
+        if actual != expected:
+            errors.append('Changed: ' + path)
+    return errors
+
+
+def artifact_errors(config):
+    return fingerprint_errors(config['artifacts'])
+
+
+def maintenance_errors(config):
+    errors = artifact_errors(config) + fingerprint_errors(config.get('update_inputs', {}))
+    if config.get('certificate'):
+        check = subprocess.run(['mokutil', '--test-key', config['certificate']],
+                               capture_output=True, text=True, env={**os.environ, 'LC_ALL': 'C'})
+        if 'is already enrolled' not in check.stdout:
+            errors.append('Signing certificate is not enrolled')
+    return errors
+
+
+def guard(config):
+    errors = maintenance_errors(config)
+    if errors:
+        saved = out('grub2-editenv', 'list').splitlines()
+        if 'saved_entry=' + config['entry'] in saved:
+            set_default(newest_stock())
+        print('PSR maintenance required: ' + '; '.join(errors))
+        print('A stock PSR-disabled default is used if the validated entry was selected.')
+    else:
+        print('Validated PSR build and update inputs are unchanged.')
+    HEALTH.parent.mkdir(parents=True, exist_ok=True)
+    HEALTH.write_text(json.dumps({'checked_at': time.time(), 'errors': errors}, indent=2) + '\n')
+    return errors
+
+
+def newer_than(candidate, baseline):
+    if candidate == baseline:
+        return False
+    ordered = subprocess.check_output(['sort', '-V'], input=baseline + '\n' + candidate + '\n', text=True).splitlines()
+    return ordered[-1] == candidate
+
+
+def entry_field(text, name):
+    values = [line.split(None, 1)[1] for line in text.splitlines()
+              if line.startswith(name + ' ') and len(line.split(None, 1)) == 2]
+    return values[0] if len(values) == 1 else None
+
+
+def stock_candidates(excluded_version=None):
+    candidates = []
+    for path in ENTRIES.glob('*.conf'):
+        text = path.read_text()
+        version = entry_field(text, 'version')
+        args = (entry_field(text, 'options') or '').split()
+        if version == excluded_version or [x for x in args if x.startswith('i915.enable_psr=')] != ['i915.enable_psr=0']:
+            continue
+        linux = entry_field(text, 'linux')
+        initrd = entry_field(text, 'initrd')
+        if not linux or not initrd:
+            continue
+        if not (Path('/boot') / linux.lstrip('/')).is_file():
+            continue
+        if not (Path('/boot') / initrd.split()[0].lstrip('/')).is_file():
+            continue
+        candidates.append((version or '', path.stem))
+    return candidates
+
+
+def newest_stock(excluded_version=None):
+    candidates = stock_candidates(excluded_version)
+    if not candidates:
+        raise SystemExit('No usable PSR-disabled stock boot entry found')
+    versions = '\n'.join(version for version, _ in candidates) + '\n'
+    ordered = subprocess.check_output(['sort', '-V'], input=versions, text=True).splitlines()
+    return next(entry for version, entry in candidates if version == ordered[-1])
+
+
+def set_default(entry):
+    if not re.fullmatch(r'[A-Za-z0-9_.+-]+', entry):
+        raise SystemExit('Invalid boot entry ID')
+    subprocess.run(['grub2-set-default', entry], check=True)
+    if 'saved_entry=' + entry not in out('grub2-editenv', 'list').splitlines():
+        raise SystemExit('Could not verify boot default')
+
+
+def status(config):
+    args = Path('/proc/cmdline').read_text().split()
+    loaded = read('/sys/module/i915/parameters/psr_diag_link_standby') == 'Y'
+    mode = read('/sys/kernel/debug/dri/0000:00:02.0/i915_edp_psr_status') or ''
+    active = loaded and 'PSR mode: PSR1 enabled' in mode and 'standby=1' in mode
+    print('Running kernel:', os.uname().release)
+    print('Validated build:', config['kernel'])
+    print('PSR workaround:', 'ACTIVE' if active else 'not active')
+    print('Boot type:', 'persistent validated entry' if MARKER in args else 'test/stock entry')
+    print('Next default:', out('grubby', '--default-title'))
+    errors = maintenance_errors(config)
+    print('Validated boot files/update inputs:', 'intact' if not errors else '; '.join(errors))
+    if errors:
+        print('Refresh/rebuild and test the PSR image before selecting it again.')
+    pending = read(PENDING)
+    if os.uname().release != config['kernel']:
+        print('This kernel needs its own matching PSR rebuild and hardware test.')
+        print('Normal Fedora boots keep PSR disabled until that is done.')
+    if pending:
+        event = json.loads(pending)
+        if event['kernel'] != config['kernel']:
+            print('Last kernel update:', event['action'], event['kernel'])
+            print('No automatic patch porting/rebuild was attempted.')
+    print('Recovery default: sudo precision-psr use-stock (does not reboot)')
+
+
+def kernel_event(config, action, version):
+    if not re.fullmatch(r'[A-Za-z0-9_.+-]+', version):
+        raise SystemExit('Invalid kernel version')
+    PENDING.parent.mkdir(parents=True, exist_ok=True)
+    temporary = PENDING.with_suffix('.tmp')
+    temporary.write_text(json.dumps({'action': action, 'kernel': version,
+                                     'time': time.time(), 'validated_kernel': config['kernel']}, indent=2) + '\n')
+    temporary.replace(PENDING)
+    if action == 'remove' and version == config['kernel']:
+        saved = out('grub2-editenv', 'list').splitlines()
+        if 'saved_entry=' + config['entry'] in saved:
+            set_default(newest_stock(excluded_version=version))
+        path = ENTRIES / (config['entry'] + '.conf')
+        if path.exists() and hashlib.sha256(path.read_bytes()).hexdigest() == config['artifacts'].get(str(path)):
+            path.unlink()
+        print('Validated kernel removed; its generated persistent entry was retired.')
+    elif action == 'add' and version != config['kernel']:
+        if newer_than(version, config['kernel']):
+            set_default(newest_stock())
+        print('Kernel ' + version + ' requires a matching PSR rebuild/test; stock PSR-disabled boots remain available.')
+    guard(config)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('action', choices=['status', 'guard', 'use-validated', 'use-stock', 'kernel-event'])
+    parser.add_argument('event', nargs='?', choices=['add', 'remove'])
+    parser.add_argument('kernel', nargs='?')
+    args = parser.parse_args()
+    if os.geteuid():
+        raise SystemExit('Run with sudo: sudo precision-psr ' + args.action)
+    if not CONFIG.exists():
+        raise SystemExit('No persistent PSR configuration installed')
+    config = json.loads(CONFIG.read_text())
+    if args.action == 'status':
+        status(config)
+    elif args.action == 'guard':
+        guard(config)
+    elif args.action == 'use-stock':
+        set_default(newest_stock())
+        print('PSR-disabled stock boot selected as the default. No reboot requested.')
+    elif args.action == 'use-validated':
+        errors = maintenance_errors(config)
+        if errors:
+            raise SystemExit('; '.join(errors))
+        set_default(config['entry'])
+        print('Validated PSR build selected as the default. No reboot requested.')
+    else:
+        if not args.event or not args.kernel:
+            parser.error('kernel-event requires add/remove and a kernel version')
+        kernel_event(config, args.event, args.kernel)
+
+if __name__ == '__main__':
+    main()

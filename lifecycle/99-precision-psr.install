@@ -1,0 +1,12 @@
+#!/usr/bin/bash
+# Observe kernel lifecycle events without blocking package updates or porting code.
+case "$1" in
+    add|remove)
+        if [[ -f /etc/precision-psr-managed.json ]]; then
+            if ! /usr/local/sbin/precision-psr kernel-event "$1" "$2"; then
+                /usr/bin/logger -t precision-psr 'Kernel update notification failed; run sudo precision-psr status.'
+            fi
+        fi
+        ;;
+esac
+exit 0
