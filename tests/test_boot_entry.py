@@ -22,9 +22,9 @@ class BootTests(unittest.TestCase):
         self.assertIn('i915.enable_psr=1', result)
         self.assertIn('title Precision 5550 PSR1 link-standby test v2 (4-minute recovery)', result)
     def test_flags_are_unique(self):
-        source = NORMAL.replace(' quiet', ' drm.debug=0 i915.psr_diag=0 quiet')
+        source = NORMAL.replace(' quiet', ' i915.psr_safest_params=0 i915.psr_diag=0 quiet')
         result = make_entry(source, '/initramfs-test.img')
-        self.assertEqual(result.count('drm.debug='), 1)
+        self.assertEqual(result.count('i915.psr_safest_params='), 1)
         self.assertEqual(result.count('i915.psr_diag='), 1)
     def test_reject_enabled_source(self):
         with self.assertRaises(ValueError):

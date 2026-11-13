@@ -16,7 +16,7 @@ def make_entry(original, image):
     if args.count('i915.enable_psr=0') != 1:
         raise ValueError('Normal boot must disable PSR')
     changes = {'i915.enable_psr': '1', 'i915.psr_safest_params': '1',
-               'i915.psr_diag': '1', 'i915.psr_diag_link_standby': '1', 'drm.debug': '0x106', 'log_buf_len': '8M'}
+               'i915.psr_diag': '1', 'i915.psr_diag_link_standby': '1'}
     args = [arg for arg in args if arg.split('=', 1)[0] not in changes]
     args += [f'{key}={value}' for key, value in changes.items()]
     result = []
